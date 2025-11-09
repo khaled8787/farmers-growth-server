@@ -1,28 +1,45 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import cropsRouter from "./crops2.js";
-import interestRouter from "./interest.js";
-import usersRouter from "./users.js";
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
+const { MongoClient, ServerApiVersion } = require("mongodb");
 
-dotenv.config();
 const app = express();
+const port = process.env.PORT || 5000;
+
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 5000;
+const uri = process.env.MONGO_URI;
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
 
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(()=> console.log("MongoDB connected"))
-  .catch(err=> console.error("MongoDB connection error:", err));
+async function run() {
+  try {
+    await client.connect();
+    console.log("✅ MongoDB Connected Successfully");
 
-app.get("/", (req, res) => res.json({ message: "KrishiLink API OK" }));
+    const db = client.db("krishilinkDB");
+    const cropsCollection = db.collection("crops");
 
-app.use("/api/crops", cropsRouter);
-app.use("/api/interest", interestRouter);
-app.use("/api/users", usersRouter);
+    app.get("/", (req, res) => {
+      res.send("KrishiLink Server is Running...");
+    });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.get("/test", async (req, res) => {
+      const all = await cropsCollection.find().toArray();
+      res.send(all);
+    });
+  } catch (err) {
+    console.log(err);
+  }
+}
+run();
 
-
+app.listen(port, () => {
+  console.log(`🚀 Server running on port: ${port}`);
+});
