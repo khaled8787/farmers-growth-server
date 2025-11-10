@@ -1,31 +1,41 @@
-import mongoose from "mongoose";
+import express from "express";
+import jwt from "jsonwebtoken";
+import { verifyToken } from "./verifyToken.js";
+import { cropsCollection } from "./dbConnect.js";
 
-const interestSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  cropId: String,
-  userEmail: String,
-  userName: String,
-  quantity: Number,
-  message: String,
-  status: { type: String, default: "pending" }
-}, { timestamps: true });
+const router = express.Router();
 
-const ownerSchema = new mongoose.Schema({
-  ownerEmail: String,
-  ownerName: String
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) return res.status(401).send({ error: "Unauthorized" });
+
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).send({ error: "Forbidden" });
+    req.decoded = decoded;
+    next();
+  });
+};
+
+router.get("/my-posts", verifyJWT, async (req, res) => {
+  const email = req.decoded.email;
+  const crops = await req.app.locals.cropsCollection.find({ "owner.ownerEmail": email }).toArray();
+  res.send(crops);
 });
 
-const cropSchema = new mongoose.Schema({
-  name: String,
-  type: String,
-  pricePerUnit: Number,
-  unit: String,
-  quantity: Number,
-  description: String,
-  location: String,
-  image: String,
-  interests: [interestSchema],
-  owner: ownerSchema
-}, { timestamps: true });
+router.post("/add", verifyToken, async (req, res) => {
+  try {
+    const cropData = req.body;
+    cropData.owner = {
+      ownerEmail: req.user.email,
+      ownerName: req.user.name,
+    };
+    cropData.interests = [];
+    const result = await cropsCollection.insertOne(cropData);
+    res.send({ success: true, message: "Crop added successfully", result });
+  } catch (error) {
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
 
-export default mongoose.model("Crop", cropSchema);
+export default router;
