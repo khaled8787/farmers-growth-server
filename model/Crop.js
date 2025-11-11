@@ -1,25 +1,20 @@
 import mongoose from "mongoose";
 
-const cropSchema = new mongoose.Schema({
+const CropSchema = new mongoose.Schema({
+  _id: Number, 
   name: String,
-  category: String,
-  price: Number,
+  type: String,
+  pricePerUnit: Number,
+  unit: String,
   quantity: Number,
   description: String,
+  location: String,
   image: String,
   owner: {
-    ownerName: String,
-    ownerEmail: String
+    ownerEmail: String,
+    ownerName: String
   },
-  interests: [
-    {
-      userName: String,
-      userEmail: String,
-      quantity: Number,
-      status: { type: String, default: "pending" }
-    }
-  ]
-}, { timestamps: true });
+  interests: Array
+});
 
-const Crop = mongoose.model("Crop", cropSchema);
-export default Crop;
+export default mongoose.model("Crop", CropSchema);
