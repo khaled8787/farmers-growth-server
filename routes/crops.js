@@ -1,7 +1,6 @@
 import express from "express";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
-import { verifyToken } from "../middleware/verifyToken.js";
 dotenv.config();
 
 const router = express.Router();
@@ -20,10 +19,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-
 router.get("/:id", async (req, res) => {
   try {
-    const id = parseInt(req.params.id); 
+    const id = parseInt(req.params.id);
     const crop = await cropsCollection.findOne({ _id: id });
     if (!crop) return res.status(404).json({ message: "Crop not found" });
     res.json(crop);
@@ -32,40 +30,15 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-
-router.post("/:id/interest", async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const { userEmail, userName } = req.body;
-
-    const crop = await cropsCollection.findOne({ _id: id });
-    if (!crop) return res.status(404).json({ message: "Crop not found" });
-
-   
-    const alreadyInterested = crop.interests?.some(i => i.userEmail === userEmail);
-    if (alreadyInterested) {
-      return res.status(400).json({ message: "You already showed interest" });
-    }
-
-    await cropsCollection.updateOne(
-      { _id: id },
-      { $push: { interests: { userEmail, userName } } }
-    );
-
-    res.json({ message: "Interest added successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-router.post("/add", verifyToken, async (req, res) => {
+router.post("/add", async (req, res) => {
   try {
     const crop = req.body;
-    crop._id = Date.now(); 
-    crop.owner = { ownerEmail: req.user.email, ownerName: req.user.name };
+    crop._id = Date.now();
+    crop.owner = {
+      ownerEmail: crop.ownerEmail || "anonymous@gmail.com",
+      ownerName: crop.ownerName || "Anonymous",
+    };
     crop.interests = [];
-    
     await cropsCollection.insertOne(crop);
     res.status(201).json({ message: "Crop added successfully", crop });
   } catch (error) {
@@ -74,5 +47,28 @@ router.post("/add", verifyToken, async (req, res) => {
   }
 });
 
+
+router.put("/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const updatedData = req.body;
+    const result = await cropsCollection.updateOne({ _id: id }, { $set: updatedData });
+    if (result.matchedCount === 0) return res.status(404).json({ message: "Crop not found" });
+    res.json({ message: "Crop updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const result = await cropsCollection.deleteOne({ _id: id });
+    if (result.deletedCount === 0) return res.status(404).json({ message: "Crop not found" });
+    res.json({ message: "Crop deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 export default router;
