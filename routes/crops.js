@@ -1,6 +1,7 @@
 import express from "express";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
+import { verifyToken } from "../middleware/verifyToken.js";
 dotenv.config();
 
 const router = express.Router();
@@ -52,6 +53,21 @@ router.post("/:id/interest", async (req, res) => {
     );
 
     res.json({ message: "Interest added successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/add", verifyToken, async (req, res) => {
+  try {
+    const crop = req.body;
+    crop._id = Date.now(); 
+    crop.owner = { ownerEmail: req.user.email, ownerName: req.user.name };
+    crop.interests = [];
+    
+    await cropsCollection.insertOne(crop);
+    res.status(201).json({ message: "Crop added successfully", crop });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
