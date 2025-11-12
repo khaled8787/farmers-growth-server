@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { MongoClient, ServerApiVersion } from "mongodb";
+
 dotenv.config();
 
 const app = express();
@@ -26,19 +27,27 @@ async function run() {
     cropsCollection = db.collection("crops");
 
     app.get("/", (req, res) => {
-      res.send("🌾 Farmer Growth Server is running...");
+      res.send(" Farmer Growth Server is running...");
     });
 
     app.get("/crops", async (req, res) => {
-      const crops = await cropsCollection.find().sort({ _id: 1 }).toArray();
-      res.json(crops);
+      try {
+        const crops = await cropsCollection.find().sort({ _id: 1 }).toArray();
+        res.json(crops);
+      } catch (err) {
+        res.status(500).json({ message: "Server error" });
+      }
     });
 
     app.get("/crops/:id", async (req, res) => {
-      const id = parseInt(req.params.id);
-      const crop = await cropsCollection.findOne({ _id: id });
-      if (!crop) return res.status(404).json({ message: "Crop not found" });
-      res.json(crop);
+      try {
+        const id = parseInt(req.params.id);
+        const crop = await cropsCollection.findOne({ _id: id });
+        if (!crop) return res.status(404).json({ message: "Crop not found" });
+        res.json(crop);
+      } catch (err) {
+        res.status(500).json({ message: "Server error" });
+      }
     });
 
     app.post("/crops/add", async (req, res) => {
@@ -48,10 +57,10 @@ async function run() {
         crop.owner = { ownerEmail: "test@gmail.com", ownerName: "Test Owner" };
         crop.interests = [];
         await cropsCollection.insertOne(crop);
-        res.status(201).json({ message: " Crop added successfully", crop });
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: " Server error" });
+        res.status(201).json({ message: "Crop added successfully", crop });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
       }
     });
 
@@ -63,11 +72,11 @@ async function run() {
           { _id: id },
           { $set: updatedData }
         );
-        if (result.modifiedCount === 0)
+        if (result.matchedCount === 0)
           return res.status(404).json({ message: "Crop not found" });
-        res.json({ message: " Crop updated successfully" });
-      } catch (error) {
-        res.status(500).json({ message: " Server error" });
+        res.json({ message: "Crop updated successfully" });
+      } catch (err) {
+        res.status(500).json({ message: "Server error" });
       }
     });
 
@@ -77,35 +86,53 @@ async function run() {
         const result = await cropsCollection.deleteOne({ _id: id });
         if (result.deletedCount === 0)
           return res.status(404).json({ message: "Crop not found" });
-        res.json({ message: " Crop deleted successfully" });
-      } catch (error) {
-        res.status(500).json({ message: " Server error" });
+        res.json({ message: "Crop deleted successfully" });
+      } catch (err) {
+        res.status(500).json({ message: "Server error" });
       }
     });
 
     app.post("/crops/:id/interest", async (req, res) => {
-      const id = parseInt(req.params.id);
-      const { userEmail, userName } = req.body;
+      try {
+        const id = parseInt(req.params.id);
+        const { userEmail, userName, quantity, message } = req.body;
 
-      const crop = await cropsCollection.findOne({ _id: id });
-      if (!crop) return res.status(404).json({ message: "Crop not found" });
+        const crop = await cropsCollection.findOne({ _id: id });
+        if (!crop) return res.status(404).json({ message: "Crop not found" });
 
-      const alreadyInterested = crop.interests?.some(i => i.userEmail === userEmail);
-      if (alreadyInterested) return res.status(400).json({ message: "Already interested" });
+        if (crop.owner?.ownerEmail === userEmail) {
+          return res.status(400).json({ message: "Owner cannot send interest to own crop" });
+        }
 
-      await cropsCollection.updateOne(
-        { _id: id },
-        { $push: { interests: { userEmail, userName, status: "pending" } } }
-      );
-      res.json({ message: " Interest added successfully" });
+        const already = (crop.interests || []).some(i => i.userEmail === userEmail);
+        if (already) return res.status(400).json({ message: "Already sent interest" });
+
+        const interestId = Date.now();
+        const newInterest = {
+          _id: interestId,
+          cropId: id,
+          userEmail,
+          userName,
+          quantity: Number(quantity) || 0,
+          message: message || "",
+          status: "pending"
+        };
+
+        await cropsCollection.updateOne({ _id: id }, { $push: { interests: newInterest } });
+        res.status(201).json({ message: "Interest added successfully", interest: newInterest });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
     });
 
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
 }
-run();
+
+run().catch(err => console.error(err));
 
 app.listen(port, () => {
-  console.log(` Server running on port: ${port}`);
+  console.log(` Server running on port ${port}`);
 });
