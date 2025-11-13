@@ -101,8 +101,53 @@ async function run() {
       res.json(interests);
     });
 
+    app.put("/interests/update", async (req, res) => {
+      try {
+        const { cropId, interestId, status } = req.body;
+
+        if (!cropId || !interestId || !status)
+          return res.status(400).json({ message: "Required fields missing" });
+
+        const id = parseInt(cropId);
+        const crop = await cropsCollection.findOne({ _id: id });
+        if (!crop) return res.status(404).json({ message: "Crop not found" });
+
+        const ownerEmail = "test@gmail.com"; 
+        if (crop.owner?.ownerEmail !== ownerEmail)
+          return res.status(403).json({ message: "Only owner can update interests" });
+
+        const interestEntry = (crop.interests || []).find(
+          (i) => String(i._id) === String(interestId)
+        );
+        if (!interestEntry) return res.status(404).json({ message: "Interest not found" });
+
+        if (interestEntry.status !== "pending")
+          return res.status(400).json({ message: "Interest already processed" });
+
+        await cropsCollection.updateOne(
+          { _id: id, "interests._id": interestEntry._id },
+          { $set: { "interests.$.status": status } }
+        );
+
+        if (status === "accepted") {
+          const newQty = Math.max(0, (crop.quantity || 0) - (interestEntry.quantity || 0));
+          await cropsCollection.updateOne({ _id: id }, { $set: { quantity: newQty } });
+        }
+
+        const updatedCrop = await cropsCollection.findOne({ _id: id });
+        const updatedInterest = (updatedCrop.interests || []).find(
+          (i) => String(i._id) === String(interestId)
+        );
+
+        res.json({ message: "Interest updated successfully", interest: updatedInterest });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
   } catch (err) {
-    console.error(err);
+    console.error("MongoDB connection error:", err);
   }
 }
 
