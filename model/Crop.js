@@ -1,20 +1,18 @@
 import mongoose from "mongoose";
 
-const CropSchema = new mongoose.Schema({
-  _id: Number, 
-  name: String,
-  type: String,
-  pricePerUnit: Number,
-  unit: String,
-  quantity: Number,
-  description: String,
-  location: String,
-  image: String,
+const cropSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+  pricePerUnit: { type: Number, required: true },
+  unit: { type: String, required: true },
+  quantity: { type: Number, required: true },
+  description: { type: String },
+  location: { type: String, required: true },
+  image: { type: String },
   owner: {
-    ownerEmail: String,
-    ownerName: String
+    ownerName: { type: String, required: true },
+    ownerEmail: { type: String, required: true },
   },
-  interests: Array
 });
 
-export default mongoose.model("Crop", CropSchema);
+export default mongoose.model("Crop", cropSchema);
