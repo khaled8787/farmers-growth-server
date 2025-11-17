@@ -6,7 +6,7 @@ const interestSchema = new mongoose.Schema({
   sellerEmail: { type: String, required: true },
   buyerEmail: { type: String, required: true },
   status: { type: String, default: "Pending" },
-  quantity: { type: Number, required: true },
+  quantity: { type: Number },
   message: { type: String },
 });
 
