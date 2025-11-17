@@ -5,7 +5,7 @@ const interestSchema = new mongoose.Schema({
   cropName: { type: String },
   sellerEmail: { type: String, required: true },
   buyerEmail: { type: String, required: true },
-  status: { type: String, default: "Pending" }, // Pending, Accepted, Rejected
+  status: { type: String, default: "Pending" },
   quantity: { type: Number, required: true },
   message: { type: String },
 });
