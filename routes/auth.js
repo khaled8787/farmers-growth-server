@@ -3,14 +3,22 @@ import bcrypt from "bcrypt";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 
+
 dotenv.config();
 
 const router = express.Router();
+
+
+if (!process.env.MONGO_URI) {
+  throw new Error("MONGO_URI is not defined in .env");
+}
+
 
 const client = new MongoClient(process.env.MONGO_URI);
 await client.connect();
 const db = client.db("farmerGrowthDB");
 const usersCollection = db.collection("users");
+
 
 router.post("/register", async (req, res) => {
   try {
@@ -56,6 +64,5 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 export default router;
