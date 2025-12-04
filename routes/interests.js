@@ -33,19 +33,34 @@ router.get("/myInterests", async (req, res) => {
 
 router.put("/update/:id", async (req, res) => {
   try {
-    const { status, userEmail } = req.body;
+    const { status, userEmail } = req.body; 
     const interest = await Interest.findById(req.params.id);
 
     if (!interest) return res.status(404).json({ message: "Interest not found" });
-    if (interest.sellerEmail !== userEmail) return res.status(403).json({ message: "Not authorized to update" });
+
+    const crop = await Crop.findById(interest.cropId);
+    if (!crop) return res.status(404).json({ message: "Crop not found" });
+
+    if (crop.owner.ownerEmail !== userEmail) {
+      return res.status(403).json({ message: "Not authorized to update" });
+    }
 
     interest.status = status;
     await interest.save();
-    res.json(interest);
+
+    if (status === "Accepted") {
+      crop.quantity -= interest.quantity; 
+      if (crop.quantity < 0) crop.quantity = 0; 
+      await crop.save();
+    }
+
+    res.json(interest); 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 });
+
 
 router.delete("/delete/:id", async (req, res) => {
   try {

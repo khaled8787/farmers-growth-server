@@ -13,6 +13,8 @@ const cropSchema = new mongoose.Schema({
     ownerName: { type: String, required: true },
     ownerEmail: { type: String, required: true },
   },
-});
+},
+   { timestamps: true }
+);
 
 export default mongoose.model("Crop", cropSchema);

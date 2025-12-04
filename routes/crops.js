@@ -46,7 +46,7 @@ router.post("/add", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const crops = await Crop.find();
+    const crops = await Crop.find().sort({ createdAt: -1 }); 
     res.json(crops);
   } catch (err) {
     console.error(err);
