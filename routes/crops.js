@@ -14,7 +14,7 @@ router.post("/add", async (req, res) => {
       quantity,
       description,
       location,
-      image,
+      images,       // <-- multiple images array
       ownerEmail,
       ownerName,
     } = req.body;
@@ -31,7 +31,7 @@ router.post("/add", async (req, res) => {
       quantity,
       description,
       location,
-      image,
+      images: images || [],  // <-- save images array, default empty
       owner: { ownerName, ownerEmail },
     });
 
@@ -44,15 +44,38 @@ router.post("/add", async (req, res) => {
 });
 
 
+
 router.get("/", async (req, res) => {
   try {
-    const crops = await Crop.find().sort({ createdAt: -1 }); 
-    res.json(crops);
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+
+    if (!page || !limit) {
+      const crops = await Crop.find().sort({ createdAt: -1 });
+      return res.json(crops);
+    }
+
+    const skip = (page - 1) * limit;
+
+    const total = await Crop.countDocuments();
+
+    const crops = await Crop.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      crops,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
-    console.error(err);
+    console.error("Crops fetch error:", err);
     res.status(500).json({ message: err.message });
   }
 });
+
 
 
 router.get("/myCrops", async (req, res) => {
